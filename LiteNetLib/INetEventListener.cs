@@ -79,6 +79,11 @@ namespace LiteNetLib
         void OnNetworkReceive(NetPeer peer, NetDataReader reader, DeliveryMethod deliveryMethod);
 
         /// <summary>
+        /// Received some data
+        /// </summary>
+        void OnNetworkReceiveEvt(NetEvent evt);
+
+        /// <summary>
         /// Received unconnected message
         /// </summary>
         /// <param name="remoteEndPoint">From address (IP and Port)</param>
@@ -106,6 +111,7 @@ namespace LiteNetLib
         public delegate void OnPeerDisconnected(NetPeer peer, DisconnectInfo disconnectInfo);
         public delegate void OnNetworkError(IPEndPoint endPoint, int socketErrorCode);
         public delegate void OnNetworkReceive(NetPeer peer, NetDataReader reader, DeliveryMethod deliveryMethod);
+        public delegate void OnNetworkReceiveEvt(NetEvent evt);
         public delegate void OnNetworkReceiveUnconnected(IPEndPoint remoteEndPoint, NetDataReader reader, UnconnectedMessageType messageType);
         public delegate void OnNetworkLatencyUpdate(NetPeer peer, int latency);
 
@@ -115,6 +121,7 @@ namespace LiteNetLib
         public event OnPeerDisconnected PeerDisconnectedEvent;
         public event OnNetworkError NetworkErrorEvent;
         public event OnNetworkReceive NetworkReceiveEvent;
+        public event OnNetworkReceiveEvt NetworkReceiveEvtEvent;
         public event OnNetworkReceiveUnconnected NetworkReceiveUnconnectedEvent;
         public event OnNetworkLatencyUpdate NetworkLatencyUpdateEvent;
         public event OnConnectionRequest ConnectionRequestEvent;
@@ -141,6 +148,12 @@ namespace LiteNetLib
         {
             if (NetworkReceiveEvent != null)
                 NetworkReceiveEvent(peer, reader, deliveryMethod);
+        }
+
+        void INetEventListener.OnNetworkReceiveEvt(NetEvent evt)
+        {
+            if (NetworkReceiveEvtEvent != null)
+                NetworkReceiveEvtEvent(evt);
         }
 
         void INetEventListener.OnNetworkReceiveUnconnected(IPEndPoint remoteEndPoint, NetDataReader reader, UnconnectedMessageType messageType)

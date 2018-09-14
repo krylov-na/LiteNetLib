@@ -12,6 +12,31 @@ using LiteNetLib.Utils;
 
 namespace LiteNetLib
 {
+    public enum NetEventType
+    {
+        Connect,
+        Disconnect,
+        Receive,
+        ReceiveUnconnected,
+        Error,
+        ConnectionLatencyUpdated,
+        DiscoveryRequest,
+        DiscoveryResponse,
+        ConnectionRequest
+    }
+
+    public sealed class NetEvent
+    {
+        public NetPeer Peer;
+        public readonly NetDataReader DataReader = new NetDataReader();
+        public NetEventType Type;
+        public IPEndPoint RemoteEndPoint;
+        public int AdditionalData;
+        public DisconnectReason DisconnectReason;
+        public ConnectionRequest ConnectionRequest;
+        public DeliveryMethod DeliveryMethod;
+    }
+
     /// <summary>
     /// Main class for all network operations. Can be used as client and/or server.
     /// </summary>
@@ -19,31 +44,6 @@ namespace LiteNetLib
     {
         internal delegate void OnMessageReceived(byte[] data, int length, int errorCode, IPEndPoint remoteEndPoint);
         internal delegate void ConnectionSolved(ConnectionRequest request, byte[] rejectData, int start, int length);
-
-        private enum NetEventType
-        {
-            Connect,
-            Disconnect,
-            Receive,
-            ReceiveUnconnected,
-            Error,
-            ConnectionLatencyUpdated,
-            DiscoveryRequest,
-            DiscoveryResponse,
-            ConnectionRequest
-        }
-
-        private sealed class NetEvent
-        {
-            public NetPeer Peer;
-            public readonly NetDataReader DataReader = new NetDataReader();
-            public NetEventType Type;
-            public IPEndPoint RemoteEndPoint;
-            public int AdditionalData;
-            public DisconnectReason DisconnectReason;
-            public ConnectionRequest ConnectionRequest;
-            public DeliveryMethod DeliveryMethod;
-        }
 
 #if DEBUG
         private struct IncomingData
@@ -338,7 +338,8 @@ namespace LiteNetLib
                     _netEventListener.OnPeerDisconnected(evt.Peer, info);
                     break;
                 case NetEventType.Receive:
-                    _netEventListener.OnNetworkReceive(evt.Peer, evt.DataReader, evt.DeliveryMethod);
+                    //_netEventListener.OnNetworkReceive(evt.Peer, evt.DataReader, evt.DeliveryMethod);
+                    _netEventListener.OnNetworkReceiveEvt(evt);
                     break;
                 case NetEventType.ReceiveUnconnected:
                     _netEventListener.OnNetworkReceiveUnconnected(evt.RemoteEndPoint, evt.DataReader, UnconnectedMessageType.BasicMessage);
@@ -360,6 +361,23 @@ namespace LiteNetLib
                     break;
             }
 
+            if (evt.Type != NetEventType.Receive)
+            {
+
+                //Recycle
+                evt.DataReader.Clear();
+                evt.Peer = null;
+                evt.AdditionalData = 0;
+                evt.RemoteEndPoint = null;
+                evt.ConnectionRequest = null;
+
+                lock (_netEventsPool)
+                    _netEventsPool.Push(evt);
+            }
+        }
+
+        public void RecycleEvent(NetEvent evt)
+        {
             //Recycle
             evt.DataReader.Clear();
             evt.Peer = null;
